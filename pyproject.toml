@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kascade"
+version = "0.1.0"
+description = "Kascade: A practical sparse attention method for long-context LLM inference"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    {name = "Kascade Authors"}
+]
+keywords = ["attention", "transformers", "long-context", "sparse-attention", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "accelerate==1.8.1",
+    "datasets==3.6.0",
+    "evaluate==0.4.4",
+    "fuzzywuzzy==0.18.0",
+    "huggingface-hub==0.33.1",
+    "jieba==0.42.1",
+    "latex2sympy2==1.9.1",
+    "matplotlib==3.10.3",
+    "protobuf==6.31.1",
+    "scikit-learn==1.7.0",
+    "transformers==4.53.0",
+    "wandb==0.20.1",
+    "word2number==1.1",
+    "Rouge==1.0.1",
+    "pandas",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage==7.9.1",
+    "pytest",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/kascade"
+Repository = "https://github.com/your-org/kascade"
+
+[tool.setuptools]
+package-dir = {"kascade" = "src"}
+packages = ["kascade", "kascade.kernels", "kascade.kernels.flash_attention", "kascade.kernels.flash_decoding", "kascade.metrics", "kascade.qadatasets", "kascade.runners", "kascade.strategies"]
