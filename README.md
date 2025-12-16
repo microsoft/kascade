@@ -148,7 +148,9 @@ python scripts/eval_script.py --model_name meta-llama/Meta-Llama-3.1-8B-Instruct
 ```
 
 ### Figure 4: Layer-Importance
-TODO:
+```bash
+python scripts/eval_script.py --model_name meta-llama/Meta-Llama-3.1-8B-Instruct --dataset_name bdsaglam/musique --subsets answerable --num_queries 1000 --strategies post_softmax_pooled_prefill_topk --tile_size 32 --run_type select_layers
+```
 
 ### Ablations
 To run all ablations
