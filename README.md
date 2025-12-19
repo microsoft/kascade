@@ -9,7 +9,7 @@
 </h3>
 
 <p align="center">
-| <a href="#"><b>Paper</b></a> |
+| <a href="https://arxiv.org/abs/2512.16391"><b>Paper</b></a> |
 </p>
 
 ## Abstract
@@ -214,11 +214,13 @@ kascade/
 If you find Kascade useful, please cite our work:
 
 ```bibtex
-@article{kascade2024,
-  title={Kascade: Efficient Sparse Attention for Long-Context RAG},
-  author={},
-  journal={},
-  year={2024}
+@misc{deshmukh2025kascade,
+      title={Kascade: A Practical Sparse Attention Method for Long-Context LLM Inference}, 
+      author={Dhruv Deshmukh and Saurabh Goyal and Nipun Kwatra and Ramachandran Ramjee},
+      year={2025},
+      eprint={2512.16391},
+      archivePrefix={arXiv},
+      url={https://arxiv.org/abs/2512.16391}, 
 }
 ```
 
