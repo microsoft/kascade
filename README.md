@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img alt="Kascade" src="assets/logo_kascade.png" height="20%" width="20%">
+    <img alt="Kascade" src="assets/logo_kascade.png" height="25%" width="25%">
   </picture>
 </p>
 
@@ -72,6 +72,7 @@ python scripts/eval_script.py --model_name meta-llama/Meta-Llama-3.1-8B-Instruct
 ```
 
 **NOTE:** Currently for `efficient_kascade` which uses our efficient kernels only tile_size 32 is supported.
+**NOTE:** Currently for `efficient_kascade` only fp16 is supported. Currently models are loaded in same type as mentioned in their model config. To be able to run `efficient_kascade` please go to line 17 in `src/model_utils.py` and change `torch_dtype=torch.float16` when loading the model.
 
 **NOTE**: To use multiple GPUs you can run `scripts/eval_script.py` with `accelerate launch` and take advantage of DDP for faster processing of queries. If you run into errors, fallback to single gpu runs.
 

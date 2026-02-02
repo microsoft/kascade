@@ -12,6 +12,7 @@ from kascade.runners import MetricsRunner, StatsRunner, RunConfig
 from datasets import load_dataset
 from transformers import set_seed
 from transformers.utils import is_flash_attn_2_available, is_flash_attn_3_available
+import torch
 
 def main():
     # Parse the arguments
@@ -93,6 +94,9 @@ def main():
 
     # Loop: models -> strategies -> subsets
     for strategy_name in args.strategies:
+        if strategy_name == "efficient_kascade" and model.config.dtype != torch.float16:
+            raise ValueError("Efficient Kascade strategy requires model to be in float16 precision. Please go to line 17 in src/model_utils.py and change torch_dtype=torch.float16 when loading the model for running with efficient_kascade.")
+
         set_seed(args.seed) # Ensure reproducibility per run
         
         # Create strategy

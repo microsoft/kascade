@@ -14,7 +14,7 @@ def get_tokenizer_and_model(model_name, attn_implementation, device):
             tokenizer.add_special_tokens({'pad_token': tokenizer.eos_token})
 
     model_kwargs = {
-        "torch_dtype": torch.float16,
+        "torch_dtype": "auto",
         "attn_implementation": attn_implementation,
         "cache_dir": "/dev/shm",
         "pretrained_model_name_or_path": model_name,
@@ -33,8 +33,6 @@ def get_tokenizer_and_model(model_name, attn_implementation, device):
     single_gpu_mem_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
     if model_size_gb * 2 > single_gpu_mem_gb:  # float16 is 2 bytes per parameter
         model_kwargs["device_map"] = "auto"
-    if model_size_gb > 8:
-        model_kwargs["torch_dtype"] = "auto"
     model = AutoModelForCausalLM.from_pretrained(**model_kwargs)
 
     model.eval()
