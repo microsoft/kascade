@@ -29,7 +29,7 @@ dependencies = [
     "jieba==0.42.1",
     "latex2sympy2==1.9.1",
     "matplotlib==3.10.3",
-    "protobuf==6.31.1",
+    "protobuf==6.33.5",
     "scikit-learn==1.7.0",
     "transformers==4.53.0",
     "wandb==0.20.1",
