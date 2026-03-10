@@ -94,7 +94,7 @@ def main():
 
     # Loop: models -> strategies -> subsets
     for strategy_name in args.strategies:
-        if strategy_name == "efficient_kascade" and model.config.dtype != torch.float16:
+        if strategy_name == "efficient_kascade" and model.config.torch_dtype != torch.float16:
             raise ValueError("Efficient Kascade strategy requires model to be in float16 precision. Please go to line 17 in src/model_utils.py and change torch_dtype=torch.float16 when loading the model for running with efficient_kascade.")
 
         set_seed(args.seed) # Ensure reproducibility per run
