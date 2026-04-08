@@ -31,7 +31,7 @@ dependencies = [
     "matplotlib==3.10.3",
     "protobuf==6.33.5",
     "scikit-learn==1.7.0",
-    "transformers==4.53.0",
+    "transformers==5.0.0rc3",
     "wandb==0.20.1",
     "word2number==1.1",
     "Rouge==1.0.1",
