@@ -10,6 +10,10 @@ from .metrics import (
     qa_f1_zh_score,
     math_score,
 )
+from .verl_math_strict import (
+    compute_chained_score,
+    math_score_verl_strict,
+)
 
 __all__ = [
     "count_score",
@@ -22,4 +26,6 @@ __all__ = [
     "qa_f1_score",
     "qa_f1_zh_score",
     "math_score",
+    "compute_chained_score",
+    "math_score_verl_strict",
 ]

@@ -11,6 +11,7 @@ dataset2class = {
     "THUDM/LongBench": LongBenchMultihopDataset,
     "HuggingFaceH4/aime_2024": MathDataset,
     "HuggingFaceH4/MATH-500": MathDataset,
+    "alesiaivanova/GSM-LongHorizon": GSMLongHorizonDataset,
 }
 
 dataset2split = {
@@ -20,15 +21,17 @@ dataset2split = {
     "THUDM/LongBench": 'test',
     "HuggingFaceH4/aime_2024": 'train',
     "HuggingFaceH4/MATH-500": 'test',
+    "alesiaivanova/GSM-LongHorizon": 'test',
 }
 
 dataset2max_batch_size = {
     "framolfese/2WikiMultihopQA": 4,
     "hotpotqa/hotpot_qa": 4,
-    "bdsaglam/musique": 4,
+    "bdsaglam/musique": 128,
     "THUDM/LongBench": 1,
-    "HuggingFaceH4/aime_2024": 4,
+    "HuggingFaceH4/aime_2024": 32,
     "HuggingFaceH4/MATH-500": 32,
+    "alesiaivanova/GSM-LongHorizon": 32,
 }
 
 dataset2max_new_tokens = {
@@ -58,6 +61,7 @@ dataset2max_new_tokens = {
         "bdsaglam/musique": 32,
         "HuggingFaceH4/aime_2024": 32768,
         "HuggingFaceH4/MATH-500": 32768,
+        "alesiaivanova/GSM-LongHorizon": 10240,
 }
 
 dataset2metric = {
@@ -87,6 +91,7 @@ dataset2metric = {
     "bdsaglam/musique": qa_f1_score,
     "HuggingFaceH4/aime_2024": math_score,
     "HuggingFaceH4/MATH-500": math_score,
+    "alesiaivanova/GSM-LongHorizon": math_score_verl_strict,
 }
 
 dataset2prompt_format = {
@@ -116,4 +121,5 @@ dataset2prompt_format = {
     "bdsaglam/musique": 0,
     "HuggingFaceH4/aime_2024": 20,
     "HuggingFaceH4/MATH-500": 20,
+    "alesiaivanova/GSM-LongHorizon": 20,
 }

@@ -46,12 +46,10 @@ def compile_custom_kernel_from_cu(
             cached_hash = f.read().strip()  
             if cached_hash == source_hash:  
                 need_compile = False   
-
-    kernel_og = tilelang.compile(func, out_idx=None, pass_configs=pass_configs)
       
     if need_compile:  
         # Create library generator and compile  
-        target_obj = determine_target(kernel_og.target)  
+        target_obj = determine_target(func.target)  
         lib_gen = LibraryGenerator(target_obj, verbose=verbose)  
         lib_gen.assign_pass_configs(pass_configs)
         lib_gen.update_lib_code(cuda_source)  
@@ -69,15 +67,16 @@ def compile_custom_kernel_from_cu(
       
     # Create and return JITKernel  
     return tilelang.JITKernel.from_database(  
-        func=func,  
-        kernel_global_source=cuda_source,  
+        func=func.prim_func,  
+        device_kernel_source=cuda_source, 
+        host_kernel_source="", 
         kernel_lib_path=so_file_path,  
-        params=kernel_og.params,  
-        target=kernel_og.target,  
-        target_host=kernel_og.target_host,  
+        params=func.params,  
+        target=func.target,  
+        target_host=func.target_host,  
         out_idx=out_idx,  
         execution_backend=execution_backend,  
-        pass_configs=kernel_og.pass_configs,  
+        pass_configs=func.pass_configs,  
     )  
 
 def print_red_warning(msg):

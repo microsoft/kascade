@@ -131,7 +131,7 @@ def calculate_run_averages(model_name):
     """Calculate averages across runs from stored CSV results"""
     
     # For each strategy, collect results across all runs
-    strategy_results = defaultdict(lambda: {'score': [], 'decode_len': []})
+    strategy_results = defaultdict(lambda: {'score': [], 'decode_len': [], 'time': []})
     
     # Find all strategy CSV files
     results_dir = f"./results/evals/{model_name.split('/')[-1]}/{DATASET_NAME.split('/')[-1]}"
@@ -158,9 +158,11 @@ def calculate_run_averages(model_name):
                     # Last 4 entries are: score, prefill_len, decode_len, runtime
                     score = float(row[-4])*100
                     decode_len = float(row[-2])
+                    time = float(row[-1])
                     
                     strategy_results[strategy_name]['score'].append(score)
                     strategy_results[strategy_name]['decode_len'].append(decode_len)
+                    strategy_results[strategy_name]['time'].append(time)
                     
         except Exception as e:
             print(f"Warning: Could not read {csv_path}: {e}")
@@ -171,6 +173,7 @@ def calculate_run_averages(model_name):
         summary_results[strategy_name] = {
             'score': sum(metrics['score']) / len(metrics['score']) if metrics['score'] else 0.0,
             'decode_len': sum(metrics['decode_len']) / len(metrics['decode_len']) if metrics['decode_len'] else 0.0,
+            'time': sum(metrics['time']) / len(metrics['time']) if metrics['time'] else 0.0
         }
     
     # Write summary to CSV
@@ -182,7 +185,7 @@ def calculate_run_averages(model_name):
         writer = csv.writer(f)
         
         # Header
-        writer.writerow(["strategy", "score", "decode_len"])
+        writer.writerow(["strategy", "score", "decode_len", "time"])
         
         # Write each strategy's averages
         for strategy_name in sorted(summary_results.keys()):
@@ -191,6 +194,7 @@ def calculate_run_averages(model_name):
                 strategy_name,
                 f"{metrics['score']:.4f}",
                 f"{metrics['decode_len']:.2f}",
+                f"{metrics['time']:.2f}"
             ])
     
     print(f"\nSummary saved to: {summary_path}")

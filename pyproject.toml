@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kascade"
-version = "0.1.0"
+version = "0.2.0"
 description = "Kascade: A practical sparse attention method for long-context LLM inference"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -25,14 +25,13 @@ dependencies = [
     "datasets==3.6.0",
     "evaluate==0.4.4",
     "fuzzywuzzy==0.18.0",
-    "huggingface-hub==0.33.1",
+    "huggingface-hub>=0.33.1",
     "jieba==0.42.1",
-    "latex2sympy2==1.9.1",
+    "latex2sympy2_extended==1.11.0",
     "matplotlib==3.10.3",
     "protobuf==6.33.5",
     "scikit-learn==1.7.0",
-    "transformers==4.53.0",
-    "wandb==0.20.1",
+    "transformers>=4.53.0",
     "word2number==1.1",
     "Rouge==1.0.1",
     "pandas",

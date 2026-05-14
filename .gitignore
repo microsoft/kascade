@@ -33,6 +33,8 @@ third_party/*/dist/
 # Logs
 wandb/
 *.log
+*.txt
+*.gz
 
 # OS
 .DS_Store

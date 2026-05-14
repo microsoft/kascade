@@ -6,10 +6,16 @@ import random
 import pandas as pd
 import torch
 from datasets import load_dataset
+from .qadatasets import GSMLongHorizonDataset
 
 num_tokens = 50256
 S_TO_MS = 1000
 B_TO_GB = 1024 * 1024 * 1024
+MATH_REASONING_DATASETS = {
+    "HuggingFaceH4/aime_2024",
+    "HuggingFaceH4/MATH-500",
+    "alesiaivanova/GSM-LongHorizon",
+}
 
 def to_gb_str(bytes):
     return f"{bytes / (1024 * 1024 * 1024)} GB"
@@ -46,6 +52,39 @@ def convert_ms_to_s(time_in_ms):
 
 def convert_b_to_gb(memory_in_bytes):
     return memory_in_bytes / B_TO_GB
+
+def resolve_dataset_key_for_eval(dataset_name, subset):
+    if subset is not None and dataset_name == "THUDM/LongBench":
+        return subset
+    return dataset_name
+
+def load_eval_dataset(dataset_name, subset, split, cache_dir="/dev/shm"):
+    if dataset_name != "alesiaivanova/GSM-LongHorizon":
+        return load_dataset(
+            dataset_name,
+            subset,
+            split=split,
+            trust_remote_code=True,
+            cache_dir=cache_dir,
+        )
+
+    dataset = load_dataset(
+        dataset_name,
+        split=split,
+        trust_remote_code=True,
+        cache_dir=cache_dir,
+    )
+    if subset is None:
+        return dataset
+    return GSMLongHorizonDataset.filter_dataset_for_subset(dataset, subset)
+
+def resolve_subset_label_for_eval(dataset_name, subset, default_split):
+    if dataset_name == "alesiaivanova/GSM-LongHorizon":
+        return GSMLongHorizonDataset.subset_label(subset, default_split)
+    return subset if subset is not None else default_split
+
+def should_enable_thinking_tokens_for_dataset(dataset_name):
+    return dataset_name in MATH_REASONING_DATASETS
 
 def store_results(experiment_name, results):
     df = pd.DataFrame.from_dict(results, orient='index')

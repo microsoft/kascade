@@ -41,6 +41,9 @@ conda activate kascade
 # 2. One-command install (builds all dependencies)
 ./install.sh
 ```
+
+The install script sets up CUDA 12.8.1, TileLang nightly 0.1.8, `vllm==0.18.0`, Kascade, and can optionally install the appropriate FlashAttention version for your GPU.
+
 If you want to use models on HuggingFace that have gated access (Llama models) then create a token by following instructions at https://huggingface.co/docs/hub/security-tokens.
 A token with read scope should be enough just for using the models. After running the below command paste the token.
 
@@ -69,6 +72,15 @@ python scripts/eval_script.py --model_name [MODEL_NAME] --dataset_name [DATASET_
 Example for Kascade:
 ```bash
 python scripts/eval_script.py --model_name meta-llama/Meta-Llama-3.1-8B-Instruct --dataset_name bdsaglam/musique --subsets answerable --strategies efficient_kascade --tile_size 32 --recompute_layers 0 2 8 13 14 --rolling_prefill
+```
+### vLLM
+
+```bash
+# Run evals with vLLM
+python scripts/eval_script_vllm.py --model_name meta-llama/Meta-Llama-3.1-8B-Instruct --dataset_name bdsaglam/musique --subsets answerable --strategies decode_only_kascade --num_queries 1000 --batch_size 128 --topk 10
+
+# Run e2e vLLM benchmarks
+python scripts/benchmark_vllm.py --type decode --mode sweep --sweep_style fixed_tokens --backend kascade --block_size 16
 ```
 
 **NOTE:** Currently for `efficient_kascade` which uses our efficient kernels only tile_size 32 is supported.
@@ -193,8 +205,10 @@ kascade/
     ├── head_mappings/      # Head mappings for kascade used in experiments
 ├── scripts/                # CLI scripts and benchmarks
 │   ├── eval_script.py      # Main evaluation script
+│   ├── eval_script_vllm.py # vLLM evaluation script
 │   ├── eval_lb.py          # LongBench evaluation
 │   ├── eval_aime.py        # AIME evaluation
+│   ├── benchmark_vllm.py   # vLLM e2e benchmark
 │   ├── benchmark_prefill.py # Unified prefill benchmark
 │   └── benchmark_decode.py  # Unified decode benchmark
 ├── src/                    # Main package (import kascade)

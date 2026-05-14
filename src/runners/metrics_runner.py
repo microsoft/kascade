@@ -6,7 +6,7 @@ from typing import Tuple
 import os
 
 import torch
-from accelerate.utils import reduce, gather
+from accelerate.utils import reduce, gather, gather_object
 
 from .base import BaseGenerationRunner, GenerationStep
 
@@ -31,6 +31,7 @@ class MetricsRunner(BaseGenerationRunner):
         self._prompt_format = self.config.prompt_format
         self._totals = torch.zeros(3, dtype=torch.float64, device=self.accelerator.device)
         self._start_time: float | None = None
+        self._decode_length_rows: list[tuple[str, int, int, int]] = []
 
     def run(self):
         self._start_time = time.time()
@@ -45,6 +46,10 @@ class MetricsRunner(BaseGenerationRunner):
             self._prompt_format,
         )
         decode_len = self._decode_length(step.generated_ids)
+        subset_label = self.config.subset if self.config.subset is not None else ""
+        self._decode_length_rows.append(
+            (subset_label, int(step.index), int(step.prefill_len), int(decode_len))
+        )
         additions = torch.tensor(
             [dataset_metric, step.prefill_len, decode_len],
             dtype=torch.float64,
@@ -99,6 +104,7 @@ class MetricsRunner(BaseGenerationRunner):
         )
         self.accelerator.print(console_summary)
 
+        decode_length_rows = gather_object(self._decode_length_rows) if self.config.store_results else []
         if self.config.store_results and self.accelerator.is_main_process:
             csv_summary = self._get_results_summary(
                 metrics=(
@@ -110,13 +116,14 @@ class MetricsRunner(BaseGenerationRunner):
                 for_csv=True,
             )
             self._store_to_csv(csv_summary)
+            self._store_decode_lengths_to_csv(decode_length_rows)
 
         return self._num_queries, avg_metric, avg_prefill, avg_decode
 
     def _store_to_csv(self, summary_line: str):
         """Append results to CSV file organized by model/dataset/strategy."""
         model_name = self.config.model_name.split('/')[-1]
-        strategy_name = self.strategy.name
+        strategy_name = self._strategy_label()
         dataset_name = self.config.dataset_name.split('/')[-1] if '/' in self.config.dataset_name else self.config.dataset_name
         
         results_dir = f"./results/evals/{model_name}/{dataset_name}"
@@ -126,6 +133,29 @@ class MetricsRunner(BaseGenerationRunner):
         
         with open(csv_path, 'a') as f:
             f.write(summary_line + '\n')
+
+    def _strategy_label(self) -> str:
+        """Return the string used as the strategy identifier in CSV filenames and console output.
+
+        Override in subclasses to customise the label (e.g. for vLLM runners
+        that do not have a Strategy object).
+        """
+        return self.strategy.name
+
+    def _store_decode_lengths_to_csv(self, rows: list[tuple[str, int, int, int]]) -> None:
+        if not rows:
+            return
+        model_name = self.config.model_name.split('/')[-1]
+        strategy_name = self._strategy_label()
+        dataset_name = self.config.dataset_name.split('/')[-1] if '/' in self.config.dataset_name else self.config.dataset_name
+
+        results_dir = f"./results/reponse_lengths/{model_name}/{dataset_name}"
+        os.makedirs(results_dir, exist_ok=True)
+
+        csv_path = f"{results_dir}/{strategy_name}.csv"
+        with open(csv_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(rows)
 
     def _get_results_summary(self, metrics, for_csv=False):
         """
@@ -143,7 +173,7 @@ class MetricsRunner(BaseGenerationRunner):
             result = f"{self.config.subset},{self._num_queries},"
             
             # Add strategy config variables (excluding name and private vars)
-            all_vars = vars(self.strategy)
+            all_vars = vars(self.strategy) if self.strategy is not None else {}
             for key, value in all_vars.items():
                 if not key.startswith('_') and key != 'name':
                     if isinstance(value, list):
@@ -160,11 +190,11 @@ class MetricsRunner(BaseGenerationRunner):
             return result.rstrip(',')
         else:
             # For console: Everything (full context)
-            result = f"{self.model.config._name_or_path},{self.config.dataset_name},{self.config.subset},{self.config.seed},{self._num_queries},{self._prompt_format},"
+            result = f"{self.config.model_name},{self.config.dataset_name},{self.config.subset},{self.config.seed},{self._num_queries},{self._prompt_format},"
             
             # Add strategy name and config
-            all_vars = vars(self.strategy)
-            result += f"{self.strategy.name}"  # Always include name first for strategy values
+            all_vars = vars(self.strategy) if self.strategy is not None else {}
+            result += f"{self._strategy_label()}"  # Always include name first for strategy values
             for key, value in all_vars.items():
                 if not key.startswith('_') and key != 'name':
                     result += f",{value}"

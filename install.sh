@@ -77,29 +77,13 @@ detect_gpu_arch() {
 # Install PyTorch with CUDA 12.8
 install_pytorch() {
     print_step "Installing PyTorch with CUDA 12.8..."
-    pip install torch==2.7.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+    # pip install torch==2.7.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 }
 
 # Install CUDA via conda
 install_cuda() {
     print_step "Installing CUDA 12.8.1 via conda..."
     conda install -y cuda -c nvidia/label/cuda-12.8.1
-
-    echo ">> Configuring CUDA environment..."
-    
-    # Link the hidden headers to the standard location
-    SOURCE_DIR="$CONDA_PREFIX/targets/x86_64-linux/include"
-    DEST_DIR="$CONDA_PREFIX/include"
-
-    # Loop through every file in the source
-    for filepath in "$SOURCE_DIR"/*; do
-        filename=$(basename "$filepath")
-        
-        # Only link if the destination does NOT exist yet
-        if [ ! -e "$DEST_DIR/$filename" ]; then
-            ln -s "$filepath" "$DEST_DIR/$filename"
-        fi
-    done
     }
 
 # Install build tools
@@ -116,20 +100,14 @@ init_submodules() {
 
 # Install TileLang
 install_tilelang() {
-    print_step "Installing TileLang..."
-    
-    # Clean build artifacts if they exist
-    if [ -d "$THIRD_PARTY_DIR/tilelang/build" ]; then
-        print_warning "Cleaning TileLang build artifacts..."
-        rm -rf "$THIRD_PARTY_DIR/tilelang/build"
-        rm -rf "$THIRD_PARTY_DIR/tilelang/tilelang.egg-info"
-        rm -rf "$THIRD_PARTY_DIR/tilelang/*.egg-info"
-    fi
-    
-    # Install TileLang
-    cd "$THIRD_PARTY_DIR/tilelang"
-    pip install .
-    cd ../..
+    print_step "Installing TileLang nightly 0.1.8..."
+    pip install  https://github.com/tile-ai/tilelang-nightly/releases/download/v0.1.8%2B20260401/tilelang-0.1.8-cp38-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl#sha256=db22cb75aa985daa8749b576510d9e093d19d54f1be5310ce3101ad5052395ca
+}
+
+# Install vLLM
+install_vllm() {
+    print_step "Installing vLLM 0.18.0..."
+    pip install vllm==0.18.0
 }
 
 # Install Flash Attention 3
@@ -145,7 +123,7 @@ install_flash_attention_3() {
 # Install Flash Attention 2
 install_flash_attention_2() {
     print_step "Installing Flash Attention 2..."
-    pip install flash-attn==2.8.0.post2 --no-build-isolation
+    pip install https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.9.0/flash_attn-2.8.3+cu128torch2.10-cp312-cp312-linux_x86_64.whl
 }
 
 # Install Kascade package
@@ -167,20 +145,19 @@ main() {
     GPU_ARCH=$(detect_gpu_arch)
     echo "  Detected GPU architecture: $GPU_ARCH"
     
-    # Get submodule commits for display
-    TILELANG_COMMIT=$(cd "$THIRD_PARTY_DIR/tilelang" 2>/dev/null && git rev-parse HEAD 2>/dev/null || echo "not initialized")
+    # Get FlashAttention submodule commit for display
     FA_COMMIT=$(cd "$THIRD_PARTY_DIR/flash-attention" 2>/dev/null && git rev-parse HEAD 2>/dev/null || echo "not initialized")
     
     echo ""
     echo "This script will install:"
-    echo "  1. PyTorch with CUDA 12.8"
-    echo "  2. CUDA 12.8.1 (via conda)"
-    echo "  3. Build tools (packaging, ninja)"
-    echo "  4. TileLang (submodule: ${TILELANG_COMMIT:0:7})"
+    echo "  1. CUDA 12.8.1 (via conda)"
+    echo "  2. Build tools (packaging, ninja)"
+    echo "  3. TileLang nightly 0.1.8"
+    echo "  4. vLLM 0.18.0"
     if [ "$GPU_ARCH" -ge 9 ] 2>/dev/null; then
-        echo "  5. Flash Attention 3 (submodule: ${FA_COMMIT:0:7}) [H100/H800 detected]"
+        echo "  5. Optional Flash Attention 3 (submodule: ${FA_COMMIT:0:7}) [H100/H800 detected]"
     else
-        echo "  5. Flash Attention 2 only (v2.8.0.post2) [Non-Hopper GPU]"
+        echo "  5. Optional Flash Attention 2 (v2.8.0.post2) [Non-Hopper GPU]"
     fi
     echo "  6. Kascade and its dependencies"
     echo ""
@@ -191,20 +168,32 @@ main() {
         echo "Installation cancelled."
         exit 0
     fi
-    
-    install_pytorch
+
+    read -p "Install FlashAttention as well? [y/N] " -n 1 -r
+    echo ""
+    INSTALL_FLASH_ATTENTION=false
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        INSTALL_FLASH_ATTENTION=true
+    fi
+
+    # install_pytorch
     install_cuda
     install_build_tools
-    init_submodules
     install_tilelang
-    
-    if [ "$GPU_ARCH" -ge 9 ] 2>/dev/null; then
-        print_step "Hopper GPU detected - Installing Flash Attention 3..."
-        install_flash_attention_3
+    install_vllm
+
+    if [ "$INSTALL_FLASH_ATTENTION" = true ]; then
+        init_submodules
+        if [ "$GPU_ARCH" -ge 9 ] 2>/dev/null; then
+            print_step "Hopper GPU detected - Installing Flash Attention 3..."
+            install_flash_attention_3
+        else
+            print_step "Non-Hopper GPU detected - Installing Flash Attention 2 only..."
+            print_warning "Flash Attention 3 requires H100/H800 GPUs (Hopper architecture)"
+            install_flash_attention_2
+        fi
     else
-        print_step "Non-Hopper GPU detected - Installing Flash Attention 2 only..."
-        print_warning "Flash Attention 3 requires H100/H800 GPUs (Hopper architecture)"
-        install_flash_attention_2
+        print_step "Skipping Flash Attention installation."
     fi
 
     install_kascade

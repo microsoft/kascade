@@ -22,7 +22,7 @@ from .model_utils import (
     get_eos_token_ids,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "to_gb_str",

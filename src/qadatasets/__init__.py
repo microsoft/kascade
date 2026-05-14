@@ -4,5 +4,6 @@ from .HotPotDataset import HotPotDataset
 from .MusiqueDataset import MusiqueDataset
 from .LongBenchMultihopDataset import LongBenchMultihopDataset
 from .MathDataset import MathDataset
+from .GSMLongHorizonDataset import GSMLongHorizonDataset
 
-__all__ = ['QADataset', 'TwoWikiDataset', 'HotPotDataset', 'MusiqueDataset', 'LongBenchMultihopDataset', 'MathDataset']
+__all__ = ['QADataset', 'TwoWikiDataset', 'HotPotDataset', 'MusiqueDataset', 'LongBenchMultihopDataset', 'MathDataset', 'GSMLongHorizonDataset']
