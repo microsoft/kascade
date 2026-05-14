@@ -9,7 +9,12 @@ from kascade.strategies import *
 from accelerate.utils import InitProcessGroupKwargs
 from datetime import timedelta
 from kascade.runners import MetricsRunner, StatsRunner, RunConfig
-from datasets import load_dataset
+from kascade.utils import (
+    load_eval_dataset,
+    resolve_dataset_key_for_eval,
+    resolve_subset_label_for_eval,
+    should_enable_thinking_tokens_for_dataset,
+)
 from transformers import set_seed
 from transformers.utils import is_flash_attn_2_available, is_flash_attn_3_available
 import torch
@@ -94,10 +99,10 @@ def main():
 
     # Loop: models -> strategies -> subsets
     for strategy_name in args.strategies:
-        if strategy_name == "efficient_kascade" and model.config.torch_dtype != torch.float16:
-            raise ValueError("Efficient Kascade strategy requires model to be in float16 precision. Please go to line 17 in src/model_utils.py and change torch_dtype=torch.float16 when loading the model for running with efficient_kascade.")
-
         set_seed(args.seed) # Ensure reproducibility per run
+
+        if strategy_name == "efficient_kascade" and model.config.torch_dtype != torch.float16:
+            raise ValueError("Efficient Kascade strategy requires model to be in float16 precision. Please go to line 14 in src/model_utils.py and change torch_dtype=torch.float16 when loading the model for running with efficient_kascade.")
         
         # Create strategy
         strategy2class = {
@@ -128,18 +133,16 @@ def main():
         
         for subset in subsets_to_run:
             # Determine dataset key for config lookups
-            if subset is not None:
-                dataset_key = subset if args.dataset_name == "THUDM/LongBench" else args.dataset_name
-            else:
-                dataset_key = args.dataset_name
+            dataset_key = resolve_dataset_key_for_eval(args.dataset_name, subset)
             
-            dataset = load_dataset(args.dataset_name, subset, split=default_split, trust_remote_code=True, cache_dir="/dev/shm")
+            dataset = load_eval_dataset(args.dataset_name, subset, default_split)
             
             dataset = dataset.shuffle(seed=args.seed)
             num_queries = min(args.num_queries, len(dataset))
             dataset = dataset.select(range(num_queries))
+            subset_label = resolve_subset_label_for_eval(args.dataset_name, subset, default_split)
 
-            accelerator.print(f"\nRunning: model={args.model_name}, subset={subset if subset else 'default'}, strategy={strategy_name}")
+            accelerator.print(f"\nRunning: model={args.model_name}, subset={subset_label}, strategy={strategy_name}")
 
             # Setup generation config
             if args.use_precomputed_stats:
@@ -166,9 +169,12 @@ def main():
                 prompt_format=dataset2prompt_format[dataset_key] if args.prompt_format == -1 else args.prompt_format,
                 num_queries=num_queries,
                 metric=dataset2metric[dataset_key],
-                inst_tokens=get_inst_tokens(args.model_name, enable_thinking=True if any(d in dataset_key.lower() for d in ["aime", "math"]) else False),
+                inst_tokens=get_inst_tokens(
+                    args.model_name,
+                    enable_thinking=should_enable_thinking_tokens_for_dataset(args.dataset_name),
+                ),
                 dataset_name=args.dataset_name,
-                subset=subset if subset else default_split,
+                subset=subset_label,
                 seed=args.seed,
                 run_type=args.run_type,
                 debug=args.debug,

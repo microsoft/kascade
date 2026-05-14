@@ -106,8 +106,7 @@ def run_tilelang_fa(batch, heads, kv_seqlen, dim, groups, mode, with_ref, code):
     )
 
     config = get_heuristic_config()
-    program = tilelang_fa_kernel(T.symbolic("batch"), T.symbolic("heads"), T.symbolic("groups"), T.symbolic("kv_seqlen"), dim, tune=False)(**config)
-    kernel = tilelang.compile(program, out_idx=[5])
+    kernel = tilelang_fa_kernel(T.symbolic("batch"), heads, groups, T.symbolic("kv_seqlen"), dim, **config)
 
     if code:
         print(kernel.get_kernel_source())
@@ -183,12 +182,11 @@ def run_recompute(batch, heads, kv_seqlen, dim, groups, topk, layer, mode, with_
     kernel_dir = get_kernel_dir()
     config = get_heuristic_config()
 
-    program = recompute_kernel_fn(T.symbolic("batch"), heads, groups, T.symbolic("kv_seqlen"), dim, tune=False, layer=layer)(**config)
-    kernel = tilelang.compile(program, out_idx=[7, 8], pass_configs={"tl.disable_safe_memory_legalize": True})
+    kernel = recompute_kernel_fn(T.symbolic("batch"), heads, groups, T.symbolic("kv_seqlen"), dim, tune=False, layer=layer, **config)
 
-    reuse_program = reuse_kernel_fn(T.symbolic("batch"), heads, groups, T.symbolic("kv_seqlen"), dim, T.symbolic("topk"), tune=False)(**config)
+    reuse_kernel_og = reuse_kernel_fn(T.symbolic("batch"), heads, groups, T.symbolic("kv_seqlen"), dim, T.symbolic("topk"), **config)
     reuse_kernel = compile_custom_kernel_from_cu(
-        func=reuse_program,
+        func=reuse_kernel_og,
         cu_file_path=os.path.join(kernel_dir, "kascade_decode_cu_kernels/dynamic_alllen_reuse_cp_async_dim128_gsize4_heads32_groups8.cu"),
         so_dir=os.path.join(kernel_dir, "kascade_decode_cu_kernels/__socache__/"),
         out_idx=[7],
@@ -285,10 +283,10 @@ def run_reuse(batch, heads, kv_seqlen, dim, groups, topk, mode, with_ref, code):
     kernel_dir = get_kernel_dir()
     config = get_heuristic_config()
 
-    program = reuse_kernel_fn(T.symbolic("batch"), heads, groups, T.symbolic("kv_seqlen"), dim, T.symbolic("topk"), tune=False)(**config)
+    kernel = reuse_kernel_fn(T.symbolic("batch"), heads, groups, T.symbolic("kv_seqlen"), dim, T.symbolic("topk"), **config)
     
     modified_kernel = compile_custom_kernel_from_cu(
-        func=program,
+        func=kernel,
         cu_file_path=os.path.join(kernel_dir, "kascade_decode_cu_kernels/dynamic_alllen_reuse_cp_async_dim128_gsize4_heads32_groups8.cu"),
         so_dir=os.path.join(kernel_dir, "kascade_decode_cu_kernels/__socache__/"),
         out_idx=[7],

@@ -21,13 +21,11 @@ class EfficientKascadeStrategy(KascadeStrategy):
         self._groups = 8
         config = get_heuristic_config()
 
-        decode_recomp0_program = decode_recompute_kernel(T.symbolic("batch"), self._heads, self._groups, T.symbolic("kv_seqlen"), self._dim, tune=False, layer=0)(**config)
-        self._decode_recomp0_kernel = tilelang.compile(decode_recomp0_program, out_idx=[7, 8], pass_configs={ "tl.disable_safe_memory_legalize": True , })
+        self._decode_recomp0_kernel = decode_recompute_kernel(T.symbolic("batch"), self._heads, self._groups, T.symbolic("kv_seqlen"), self._dim, layer=0, **config)
 
-        decode_recomp1_program = decode_recompute_kernel(T.symbolic("batch"), self._heads, self._groups, T.symbolic("kv_seqlen"), self._dim, tune=False, layer=1)(**config)
-        self._decode_recomp1_kernel = tilelang.compile(decode_recomp1_program, out_idx=[7, 8], pass_configs={ "tl.disable_safe_memory_legalize": True , })
+        self._decode_recomp1_kernel = decode_recompute_kernel(T.symbolic("batch"), self._heads, self._groups, T.symbolic("kv_seqlen"), self._dim, layer=1, **config)
 
-        decode_reuse_program = decode_reuse_kernel(T.symbolic("batch"), self._heads, self._groups, T.symbolic("kv_seqlen"), self._dim, T.symbolic("topk"), tune=False)(**config)
+        decode_reuse_program = decode_reuse_kernel(T.symbolic("batch"), self._heads, self._groups, T.symbolic("kv_seqlen"), self._dim, T.symbolic("topk"), **config)
         self._decode_reuse_kernel = compile_custom_kernel_from_cu(
             func=decode_reuse_program,
             cu_file_path="./src/kernels/flash_decoding/kascade_decode_cu_kernels/dynamic_alllen_reuse_cp_async_dim128_gsize4_heads32_groups8.cu",  # Path to your compiled CUDA source

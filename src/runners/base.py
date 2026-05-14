@@ -86,7 +86,8 @@ class BaseGenerationRunner:
                     self.config.inst_tokens,
                     use_inst_tokens,
                 )
-                self.model.eval()
+                if self.model is not None:
+                    self.model.eval()
 
                 batch_size = self.config.batch_size
                 for batch_idx in tqdm(
@@ -109,7 +110,10 @@ class BaseGenerationRunner:
                         reference_answers = list(answers)
                         all_classes = [None] * len(queries)
 
-                    original_block_size = getattr(self.strategy, "_block_size", None)
+                    original_block_size = (
+                        getattr(self.strategy, "_block_size", None)
+                        if self.strategy is not None else None
+                    )
                     attempt_overrides: List[int | None] = [None]
                     if original_block_size is not None and original_block_size > 256:
                         attempt_overrides.append(256)
@@ -122,26 +126,8 @@ class BaseGenerationRunner:
                             if override is not None and original_block_size is not None:
                                 setattr(self.strategy, "_block_size", override)
 
-                            batch = self.tokenizer(
-                                prompts,
-                                return_tensors="pt",
-                                padding=True,
-                                truncation=True,
-                                max_length=self.config.max_length,
-                                padding_side="left",
-                            )
-                            outputs = self.model.generate(
-                                batch["input_ids"].to(self.model.device),
-                                attention_mask = batch["attention_mask"].to(self.model.device),
-                                generation_config = self.config.generation_config,
-                                output_hidden_states = self._output_hidden_states,
-                                return_dict_in_generate = True,
-                                synced_gpus = False,
-                            )
-                            prefill_lens = batch["attention_mask"].sum(dim=1).tolist()
-                            input_length = batch["input_ids"].shape[1]
-                            generated_ids = [ids[input_length:] for ids in outputs.sequences]
-                            generated_texts = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+                            generated_ids, generated_texts, prefill_lens, hidden_states = \
+                                self._generate_batch(prompts)
 
                             steps = [
                                 GenerationStep(
@@ -151,7 +137,7 @@ class BaseGenerationRunner:
                                     generated_text=generated_texts[offset],
                                     reference_answers=reference_answers[offset],
                                     all_classes=all_classes[offset],
-                                    hidden_states=outputs.hidden_states,
+                                    hidden_states=hidden_states,
                                 )
                                 for offset in range(len(batch_indices))
                             ]
@@ -174,6 +160,43 @@ class BaseGenerationRunner:
 
         torch.cuda.empty_cache()
         self.accelerator.wait_for_everyone()
+
+    def _generate_batch(
+        self, prompts: List[str]
+    ) -> tuple[List[torch.Tensor], List[str], List[int], Any]:
+        """Run model inference for a batch of prompts.
+
+        Returns:
+            generated_ids:   one token-ID tensor per prompt.
+            generated_texts: decoded strings.
+            prefill_lens:    number of input tokens per prompt.
+            hidden_states:   model hidden states (or None if not requested).
+
+        Override this method to plug in a different inference backend
+        (e.g. vLLM) while reusing all prompt-building, scoring, and
+        output logic from the base runner.
+        """
+        batch = self.tokenizer(
+            prompts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self.config.max_length,
+            padding_side="left",
+        )
+        outputs = self.model.generate(
+            batch["input_ids"].to(self.model.device),
+            attention_mask=batch["attention_mask"].to(self.model.device),
+            generation_config=self.config.generation_config,
+            output_hidden_states=self._output_hidden_states,
+            return_dict_in_generate=True,
+            synced_gpus=False,
+        )
+        prefill_lens = batch["attention_mask"].sum(dim=1).tolist()
+        input_length = batch["input_ids"].shape[1]
+        generated_ids = [ids[input_length:] for ids in outputs.sequences]
+        generated_texts = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+        return generated_ids, generated_texts, prefill_lens, outputs.hidden_states
 
     def collect(self, step: GenerationStep) -> None:
         raise NotImplementedError
